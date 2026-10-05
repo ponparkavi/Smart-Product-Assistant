@@ -54,10 +54,26 @@ async def test_product_crud_and_user_isolation():
         res_unauth_fetch = await ac.get(f"/api/products/{p_id}", headers=h2)
         assert res_unauth_fetch.status_code == 404
 
-        # 5. User 1 updates product
-        res_update = await ac.put(f"/api/products/{p_id}", json={"model_number": "RF-500L-PLUS"}, headers=h1)
+        # 5. User 1 updates product (including maintenance fields)
+        update_payload = {
+            "model_number": "RF-500L-PLUS",
+            "last_service_date": str(date.today() - timedelta(days=5)),
+            "next_recommended_service_date": str(date.today() + timedelta(days=180))
+        }
+        res_update = await ac.put(f"/api/products/{p_id}", json=update_payload, headers=h1)
         assert res_update.status_code == 200
-        assert res_update.json()["model_number"] == "RF-500L-PLUS"
+        updated_data = res_update.json()
+        assert updated_data["model_number"] == "RF-500L-PLUS"
+        assert "T" in updated_data["last_service_date"]
+        
+        # 5.5 Check Search Functionality
+        res_search_1 = await ac.get("/api/products?search=samsung", headers=h1)
+        assert res_search_1.status_code == 200
+        assert len(res_search_1.json()) == 1
+        
+        res_search_2 = await ac.get("/api/products?search=LG", headers=h1)
+        assert res_search_2.status_code == 200
+        assert len(res_search_2.json()) == 0
 
         # 6. Check Summary Stats for User 1
         res_stats = await ac.get("/api/products/summary", headers=h1)

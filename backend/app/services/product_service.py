@@ -58,10 +58,10 @@ class ProductService:
             "warranty_period_months": product_in.warranty_period_months,
             "usage_info": product_in.usage_info or "",
             "image_path": None,
-            "invoice_id": None,
+            "invoice_id": product_in.invoice_id,
             "manual_id": None,
-            "last_service_date": None,
-            "next_recommended_service_date": datetime.now(timezone.utc) + timedelta(days=90),
+            "last_service_date": datetime.combine(product_in.last_service_date, datetime.min.time()) if product_in.last_service_date else None,
+            "next_recommended_service_date": datetime.combine(product_in.next_recommended_service_date, datetime.min.time()) if product_in.next_recommended_service_date else (datetime.now(timezone.utc) + timedelta(days=90)),
             "created_at": now,
             "updated_at": now
         }
@@ -77,12 +77,18 @@ class ProductService:
             return ProductService._format_product(doc)
 
     @staticmethod
-    async def get_user_products(user_id: str, category: Optional[str] = None, warranty_status: Optional[str] = None) -> List[dict]:
+    async def get_user_products(user_id: str, category: Optional[str] = None, warranty_status: Optional[str] = None, search: Optional[str] = None) -> List[dict]:
         products = []
         if db_instance.is_connected and db_instance.db is not None:
             query = {"user_id": user_id}
             if category:
                 query["category"] = category
+            if search:
+                query["$or"] = [
+                    {"name": {"$regex": search, "$options": "i"}},
+                    {"brand": {"$regex": search, "$options": "i"}},
+                    {"model_number": {"$regex": search, "$options": "i"}}
+                ]
             cursor = db_instance.db["products"].find(query).sort("created_at", -1)
             async for doc in cursor:
                 formatted = ProductService._format_product(doc)
@@ -92,6 +98,8 @@ class ProductService:
             for doc in in_memory_products.values():
                 if doc["user_id"] == user_id:
                     if category and doc["category"] != category:
+                        continue
+                    if search and search.lower() not in doc["name"].lower() and search.lower() not in doc["brand"].lower():
                         continue
                     formatted = ProductService._format_product(doc)
                     if not warranty_status or formatted["warranty_status"] == warranty_status:

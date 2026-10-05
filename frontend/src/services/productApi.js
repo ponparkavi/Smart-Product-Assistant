@@ -5,10 +5,11 @@ export const createProduct = async (productData) => {
   return response.data;
 };
 
-export const getProducts = async (category = null, warrantyStatus = null) => {
+export const getProducts = async (category = null, warrantyStatus = null, search = null) => {
   const params = {};
   if (category) params.category = category;
   if (warrantyStatus) params.warranty_status = warrantyStatus;
+  if (search) params.search = search;
   const response = await api.get('/products', { params });
   return response.data;
 };
@@ -41,5 +42,16 @@ export const uploadProductImage = async (id, file) => {
 
 export const getProductSummary = async () => {
   const response = await api.get('/products/summary');
+  return response.data;
+};
+
+export const extractInvoiceOCR = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/ocr/extract', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
   return response.data;
 };

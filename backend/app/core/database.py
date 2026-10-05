@@ -2,8 +2,7 @@ import logging
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import ServerSelectionTimeoutError
 from app.core.config import settings
-
-logger = logging.getLogger("uvicorn.error")
+from app.utils.logger import logger
 
 class Database:
     client: AsyncIOMotorClient = None

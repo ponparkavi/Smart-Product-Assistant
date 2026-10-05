@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getProducts } from '../services/productApi';
-import { Plus, Search, ShieldCheck, ShieldAlert, ShieldX, Box, ArrowRight, Tag, Calendar, DollarSign } from 'lucide-react';
+import { Plus, Search, ShieldCheck, ShieldAlert, ShieldX, Box, ArrowRight, Tag, Calendar } from 'lucide-react';
 
 const CATEGORIES = [
   { label: 'All Categories', value: '' },
@@ -32,27 +32,32 @@ const ProductList = () => {
 
   const navigate = useNavigate();
 
-  const fetchProducts = async () => {
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getProducts(selectedCategory || null, selectedStatus || null);
+      const data = await getProducts(selectedCategory || null, selectedStatus || null, debouncedSearch || null);
       setProducts(data);
     } catch (err) {
       console.error("Failed to fetch products:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCategory, selectedStatus, debouncedSearch]);
 
   useEffect(() => {
     fetchProducts();
-  }, [selectedCategory, selectedStatus]);
+  }, [fetchProducts]);
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.brand.toLowerCase().includes(search.toLowerCase()) ||
-    (p.model_number && p.model_number.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredProducts = products; // Using backend results directly
 
   const getWarrantyBadge = (status, days) => {
     if (status === 'active') {

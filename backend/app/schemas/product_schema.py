@@ -30,6 +30,9 @@ class ProductCreate(BaseModel):
     warranty_start_date: Optional[date] = None
     warranty_period_months: int = Field(default=12, ge=0, description="Warranty coverage in months")
     usage_info: Optional[str] = ""
+    invoice_id: Optional[str] = None
+    last_service_date: Optional[date] = None
+    next_recommended_service_date: Optional[date] = None
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
@@ -42,6 +45,9 @@ class ProductUpdate(BaseModel):
     warranty_start_date: Optional[date] = None
     warranty_period_months: Optional[int] = None
     usage_info: Optional[str] = None
+    invoice_id: Optional[str] = None
+    last_service_date: Optional[date] = None
+    next_recommended_service_date: Optional[date] = None
 
 class ProductOut(BaseModel):
     id: str

@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getProductById, deleteProduct, uploadProductImage } from '../services/productApi';
-import { ArrowLeft, ShieldCheck, ShieldAlert, ShieldX, Calendar, Tag, DollarSign, FileText, Camera, Wrench, Trash2, Edit, Upload, Cpu, FileCheck } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, ShieldAlert, ShieldX, Tag, Camera, Wrench, Trash2, Upload, Cpu, FileCheck, FileText } from 'lucide-react';
+import ProductChat from '../components/ProductChat';
+import FaultDiagnosis from '../components/FaultDiagnosis';
+import PredictiveMaintenance from '../components/PredictiveMaintenance';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -12,8 +15,11 @@ const ProductDetail = () => {
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [uploadingImg, setUploadingImg] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [showDiagnosis, setShowDiagnosis] = useState(false);
+  const [showMaintenance, setShowMaintenance] = useState(false);
 
-  const fetchProduct = async () => {
+  const fetchProduct = React.useCallback(async () => {
     setLoading(true);
     try {
       const data = await getProductById(id);
@@ -23,11 +29,11 @@ const ProductDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchProduct();
-  }, [id]);
+  }, [fetchProduct]);
 
   const handleDelete = async () => {
     if (!window.confirm(`Are you sure you want to delete ${product.name}? This will remove all associated files and warranty logs.`)) {
@@ -53,6 +59,7 @@ const ProductDetail = () => {
       const updated = await uploadProductImage(id, file);
       setProduct(updated);
     } catch (err) {
+      console.error(err);
       alert('Failed to upload image.');
     } finally {
       setUploadingImg(false);
@@ -234,7 +241,7 @@ const ProductDetail = () => {
             <h3>Manual RAG Assistant</h3>
             <p>Upload PDF manual & ask AI about error codes, maintenance & cleaning.</p>
           </div>
-          <button className="btn-secondary" style={{ marginTop: '1rem', fontSize: '0.85rem' }}>Ask Assistant</button>
+          <button className="btn-secondary" onClick={() => setShowChat(true)} style={{ marginTop: '1rem', fontSize: '0.85rem' }}>Ask Assistant</button>
         </div>
 
         <div className="glass-card action-card">
@@ -243,7 +250,7 @@ const ProductDetail = () => {
             <h3>CNN Fault Diagnosis</h3>
             <p>Analyze appliance photo for rust, cracks, and physical wear.</p>
           </div>
-          <button className="btn-secondary" style={{ marginTop: '1rem', fontSize: '0.85rem' }}>Run Diagnosis</button>
+          <button className="btn-secondary" onClick={() => setShowDiagnosis(true)} style={{ marginTop: '1rem', fontSize: '0.85rem' }}>Run Diagnosis</button>
         </div>
 
         <div className="glass-card action-card">
@@ -252,9 +259,21 @@ const ProductDetail = () => {
             <h3>Predictive Service</h3>
             <p>Check rule-based maintenance intervals and book local service.</p>
           </div>
-          <button className="btn-secondary" style={{ marginTop: '1rem', fontSize: '0.85rem' }}>View Schedule</button>
+          <button className="btn-secondary" onClick={() => setShowMaintenance(true)} style={{ marginTop: '1rem', fontSize: '0.85rem' }}>View Schedule</button>
         </div>
       </div>
+
+      {showChat && (
+        <ProductChat product={product} onClose={() => setShowChat(false)} />
+      )}
+
+      {showDiagnosis && (
+        <FaultDiagnosis product={product} onClose={() => setShowDiagnosis(false)} />
+      )}
+
+      {showMaintenance && (
+        <PredictiveMaintenance product={product} onClose={() => setShowMaintenance(false)} />
+      )}
     </div>
   );
 };

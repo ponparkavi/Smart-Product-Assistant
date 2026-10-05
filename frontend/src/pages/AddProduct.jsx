@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { createProduct, uploadProductImage } from '../services/productApi';
-import { Plus, ArrowLeft, Upload, AlertCircle, CheckCircle } from 'lucide-react';
+import { extractInvoiceOCR } from '../services/productApi';
+import { Plus, ArrowLeft, Upload, AlertCircle, Scan, FileText } from 'lucide-react';
 
 const CATEGORIES = [
   { label: 'Refrigerator', value: 'refrigerator' },
@@ -29,11 +30,16 @@ const AddProduct = () => {
     purchase_date: new Date().toISOString().split('T')[0],
     purchase_price: '',
     warranty_period_months: 12,
-    usage_info: ''
+    usage_info: '',
+    invoice_id: ''
   });
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrError, setOcrError] = useState('');
+  const [ocrSuccessMsg, setOcrSuccessMsg] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -45,6 +51,37 @@ const AddProduct = () => {
     if (file) {
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleOcrUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setOcrLoading(true);
+    setOcrError('');
+    setOcrSuccessMsg('');
+
+    try {
+      const data = await extractInvoiceOCR(file);
+      setFormData(prev => ({
+        ...prev,
+        name: data.product_name || prev.name,
+        brand: data.brand || prev.brand,
+        model_number: data.model_number || prev.model_number,
+        purchase_date: data.purchase_date ? 
+          (data.purchase_date.includes('/') ? data.purchase_date.split('/').reverse().join('-') : data.purchase_date) 
+          : prev.purchase_date,
+        purchase_price: data.purchase_price || prev.purchase_price,
+        invoice_id: data.invoice_file_path || prev.invoice_id
+      }));
+      setOcrSuccessMsg('Invoice scanned successfully! Please review the extracted fields below.');
+    } catch (err) {
+      setOcrError(err.response?.data?.detail || 'Failed to analyze invoice. Please fill details manually.');
+    } finally {
+      setOcrLoading(false);
+      // Reset input so they can select the same file again if needed
+      e.target.value = null;
     }
   };
 
@@ -94,11 +131,43 @@ const AddProduct = () => {
         </div>
 
         {error && (
-          <div className="alert alert-danger">
+          <div className="alert alert-danger" style={{ marginBottom: '1.5rem' }}>
             <AlertCircle size={18} />
             <span>{error}</span>
           </div>
         )}
+
+        {/* AI OCR Scanner Box */}
+        <div className="glass-card" style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', color: 'var(--primary)' }}>
+                <Scan size={20} /> AI Invoice Scanner
+              </h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.3rem 0 0 0' }}>
+                Upload your receipt/invoice and we'll automatically fill the details below.
+              </p>
+            </div>
+            
+            <label className="btn-primary" style={{ cursor: 'pointer', margin: 0, padding: '0.6rem 1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: ocrLoading ? 0.7 : 1 }}>
+              <FileText size={18} />
+              {ocrLoading ? 'Scanning...' : 'Scan Invoice'}
+              <input type="file" accept="image/*" onChange={handleOcrUpload} style={{ display: 'none' }} disabled={ocrLoading} />
+            </label>
+          </div>
+          
+          {ocrError && (
+            <div style={{ marginTop: '1rem', color: 'var(--danger)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <AlertCircle size={14} /> {ocrError}
+            </div>
+          )}
+          
+          {ocrSuccessMsg && (
+            <div style={{ marginTop: '1rem', color: 'var(--success)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <FileText size={14} /> {ocrSuccessMsg}
+            </div>
+          )}
+        </div>
 
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>

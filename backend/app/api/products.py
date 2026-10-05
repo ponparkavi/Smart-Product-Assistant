@@ -28,9 +28,10 @@ async def get_product_summary(current_user: dict = Depends(get_current_user)):
 async def list_products(
     category: Optional[str] = None,
     warranty_status: Optional[str] = None,
+    search: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
-    return await ProductService.get_user_products(current_user["id"], category, warranty_status)
+    return await ProductService.get_user_products(current_user["id"], category, warranty_status, search)
 
 @router.get("/{product_id}", response_model=ProductOut)
 async def get_product(

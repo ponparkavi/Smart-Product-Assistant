@@ -10,6 +10,8 @@ class Settings(BaseSettings):
 
     MONGODB_URL: str = "mongodb://localhost:27017"
     DATABASE_NAME: str = "product_lifecycle_db"
+    
+    TESSERACT_CMD: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
